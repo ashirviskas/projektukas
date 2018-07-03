@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 import struct
 import matplotlib.pyplot as plt
 import os
+import h5py
 
 class Bandinys:
     def __init__(self, header_root = None, data_filepath = None):
@@ -27,7 +28,7 @@ class Bandinys:
         self.static_gain = []
         self.dynamic_gain = []
         self.k_gain = []
-
+        self.b_scan = None
         self.construct_metadata()
         self.construct_data()
 
@@ -144,8 +145,16 @@ class Bandinys:
                     b_scan2.append(y2)
             f.close()
             b_scan = np.array(b_scan)
-            plt.pcolormesh(b_scan)
+            self.b_scan = b_scan
+            # plt.pcolormesh(b_scan)
+            # plt.show()
+
+    def display_data(self):
+        if self.b_scan is not None:
+            plt.pcolormesh(self.b_scan)
             plt.show()
+        else:
+            return False
 
 
 def get_all_files_in_dir(directory):
@@ -153,7 +162,7 @@ def get_all_files_in_dir(directory):
     filepath = './advice2/' + directory
     samples_dir = os.listdir(filepath)
     for filename in samples_dir:
-        if os.path.isfile(filepath + '/' + filename):
+        if os.path.isfile(filepath + '/' + filename) and filename[-4:] == ".uld":
             filenames.append(filepath + "/" + filename[:-4])
     return filenames
 
@@ -166,11 +175,8 @@ def read_headerfile(filepath):
     return root
 
 
-if __name__ == "__main__":
-    # filepath = "advice2/bandinys1/3g/bandinys1_5keit_face2_2_70tasku_1"
-    # filepath = "advice2/bandinys3/3g/bandinys3_5keit_a_70tasku_4"
-    # header_root = read_headerfile(filepath + ".ulh")
-    # HiWorldie = Bandinys(header_root, filepath + ".uld")
+def files_to_hdf5(data_filename = "data_0.hdf5"):
+    data_file = h5py.File(data_filename, 'w')
     bandiniai = []
     bandiniai.append(["bandinys1", ["3g", "5g"]])
     bandiniai.append(["bandinys2", ["3g", "5g"]])
@@ -182,7 +188,14 @@ if __name__ == "__main__":
     print(filepaths)
 
     for i in range(0, len(filepaths)):
-        for j in range(0, len(filepaths[i]),2):
+        for j in range(0, len(filepaths[i])):
             print(filepaths[i][j])
             header_root = read_headerfile(filepaths[i][j] + ".ulh")
-            HiWorldie = Bandinys(header_root, filepaths[i][j] + ".uld")
+            bandinys = Bandinys(header_root, filepaths[i][j] + ".uld")
+            dataset_one = data_file.create_dataset(filepaths[i][j][1:], data=bandinys.b_scan)
+            print(dataset_one.name)
+    data_file.close()
+
+if __name__ == "__main__":
+    files_to_hdf5()
+
